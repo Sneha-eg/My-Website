@@ -5,6 +5,121 @@ const $ = (id) => document.getElementById(id);
 const safeRead = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const safeWrite = (key, value) => localStorage.setItem(key, JSON.stringify(value));
 
+const feedbackForm = $("feedbackForm");
+feedbackForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const name = $("feedbackName").value.trim();
+  const email = $("feedbackEmail").value.trim();
+  const message = $("feedbackMessage").value.trim();
+  const subject = encodeURIComponent("Website feedback from " + name);
+  const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nFeedback:\n${message}`);
+  toast("Opening your email app...");
+  window.location.href = `mailto:notusefulll000@gmail.com?subject=${subject}&body=${body}`;
+  feedbackForm.reset();
+});
+
+const guidePanel = $("guidePanel");
+const guideMessages = $("guideMessages");
+const guideInput = $("guideInput");
+function addGuideMessage(message, type, action) {
+  const bubble = document.createElement("div");
+  bubble.className = `guide-message guide-${type}`;
+  bubble.textContent = message;
+  guideMessages.appendChild(bubble);
+  if (action) {
+    const button = document.createElement(action.note ? "button" : "a");
+    button.className = "guide-action";
+    button.textContent = action.label;
+    if (action.note) {
+      button.type = "button";
+      button.dataset.note = action.note;
+    } else {
+      button.href = action.href;
+    }
+    guideMessages.appendChild(button);
+  }
+  guideMessages.scrollTop = guideMessages.scrollHeight;
+}
+function guideResponse(question) {
+  const text = question.toLowerCase();
+  if (/^(hi|hello|hey)\b/.test(text)) {
+    return { message: "Hi! Tell me what you want to work on—DSA, aptitude, interviews, resumes, or finding resources." };
+  }
+  const topicLinks = [
+    [/\bhtml\b/, "HTML"], [/\bcss\b/, "CSS"], [/\bjavascript\b|\bjs notes?\b/, "JavaScript"],
+    [/\bpython\b/, "Python"], [/\bc\+\+\b/, "C++"],
+    [/\bc programming\b|\bc language\b|\bc notes\b/, "C"], [/\bjava\b(?!script)/, "Java"],
+    [/\boperating systems?\b|\bos notes\b/, "Operating System"],
+    [/\bdbms\b|\bdatabase management\b/, "DBMS"],
+    [/\bcomputer networks?\b|\bnetworking notes\b/, "Computer Networks"],
+    [/\boops\b|\bobject[- ]oriented\b/, "OOPs"], [/\bdsa notes?\b/, "DSA Notes"],
+    [/\barrays?\b/, "Arrays"], [/\bstrings?\b/, "Strings"], [/\blinked lists?\b/, "Linked List"],
+    [/\bstacks?\b/, "Stack"], [/\bqueues?\b/, "Queue"], [/\btrees?\b/, "Trees"],
+    [/\bgraphs?\b/, "Graphs"], [/\bdynamic programming\b|\bdp notes\b/, "Dynamic Programming"],
+    [/\bquantitative aptitude\b|\baptitude notes\b/, "Quantitative Aptitude"],
+    [/\blogical reasoning\b/, "Logical Reasoning"], [/\bverbal ability\b/, "Verbal Ability"],
+    [/\bdata interpretation\b/, "Data Interpretation"], [/\bhr questions?\b/, "HR Questions"],
+    [/\btechnical questions?\b/, "Technical Questions"], [/\bresume tips\b|\bcv tips\b/, "Expert Resume Tips"],
+    [/\bats templates?\b/, "ATS Friendly Templates"], [/\bprofessional resume layouts?\b/, "Professional Layouts"]
+  ];
+  const topic = topicLinks.find(([pattern]) => pattern.test(text));
+  if (topic) {
+    const title = topic[1];
+    return { message: `I found the ${title} learning notes. Open the lesson to read them.`, label: `Open ${title} notes`, note: title };
+  }
+  if (/(start|beginner|new here|where.*begin)/.test(text)) {
+    return { message: "Start with one small goal: explore the learning resources, then follow the DSA roadmap from Arrays & Strings. Try a short practice session and build from there.", label: "See the DSA roadmap", href: "#roadmap" };
+  }
+  if (/(dsa|data structure|algorithm|roadmap)/.test(text)) {
+    return { message: "The roadmap begins with Arrays & Strings, then moves to Linked Lists, Stacks & Queues, Trees & Graphs, and Dynamic Programming. Open a topic to study at your own pace.", label: "Open Arrays lesson", note: "Arrays" };
+  }
+  if (/(aptitude|quant|reason|verbal|math)/.test(text)) {
+    return { message: "For aptitude, begin with Quantitative Aptitude and practise a little regularly. Logical Reasoning and Verbal Ability are also in the resources library.", label: "Open Quantitative Aptitude", note: "Quantitative Aptitude" };
+  }
+  if (/(interview|hr question|technical question)/.test(text)) {
+    return { message: "Interview prep is in the resources library. Start with HR Questions, then review Technical Questions and practise explaining a project using clear examples.", label: "Open HR Questions", note: "HR Questions" };
+  }
+  if (/(resume|cv|ats)/.test(text)) {
+    return { message: "The Resume Builder resources cover practical resume tips, ATS-friendly templates, and professional layouts. Keep your details accurate and easy to scan.", label: "Open resume tips", note: "Expert Resume Tips" };
+  }
+  if (/(resource|find|search|library|subject|notes)/.test(text)) {
+    return { message: "Browse the Resources section and use its search box to find a topic, subject, or skill. You can also filter saved and recently opened lessons.", label: "Browse resources", href: "#resources" };
+  }
+  if (/(account|login|log in|sign up|register)/.test(text)) {
+    return { message: "You can create an account or log in using the buttons at the top of the page. Your saved lessons and recent activity are stored in this browser." };
+  }
+  if (/(contact|feedback|email|suggest)/.test(text)) {
+    return { message: "You can send feedback or contact the site creators using the form near the bottom of the page.", label: "Go to feedback", href: "#feedback" };
+  }
+  return { message: "I can guide you around the hub. Ask me about getting started, DSA, aptitude, interview prep, resumes, accounts, or finding resources." };
+}
+function sendGuideMessage(question) {
+  const trimmedQuestion = question.trim();
+  if (!trimmedQuestion) return;
+  addGuideMessage(trimmedQuestion, "student");
+  const response = guideResponse(trimmedQuestion);
+  addGuideMessage(response.message, "bot", response.label ? response : null);
+}
+$("guideToggle").addEventListener("click", () => {
+  const isOpening = guidePanel.classList.contains("hidden");
+  guidePanel.classList.toggle("hidden", !isOpening);
+  $("guideToggle").setAttribute("aria-expanded", String(isOpening));
+  if (isOpening) guideInput.focus();
+});
+$("guideClose").addEventListener("click", () => {
+  guidePanel.classList.add("hidden");
+  $("guideToggle").setAttribute("aria-expanded", "false");
+  $("guideToggle").focus();
+});
+$("guideForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  sendGuideMessage(guideInput.value);
+  guideInput.value = "";
+});
+document.querySelectorAll("[data-guide-suggestion]").forEach((button) => {
+  button.addEventListener("click", () => sendGuideMessage(button.dataset.guideSuggestion));
+});
+
 // ---------------- AUTHENTICATION ----------------
 let authMode = "login";
 const homeView = $("homeView"), authScreen = $("authScreen"), readerScreen = $("readerScreen");
@@ -65,41 +180,60 @@ $("authForm").addEventListener("submit",async e=>{
 
 // ---------------- LEARNING LIBRARY ----------------
 
-/* =====================================================================
-   📄 PDF FILE PATHS: PUT YOUR PDF PATHS HERE
-   Key   = lesson title, exactly as written in the `resources` list below
-   Value = path or URL of the PDF (relative to index.html, or a full https:// link)
-   Example:  "Arrays": "pdfs/dsa/arrays.pdf",
-   • Leave "" (empty) and the PDF box stays hidden for that lesson.
-   • Avoid spaces in file names (use arrays-notes.pdf, not "arrays notes.pdf").
-   • Open the site through a web server or hosting (not file://) for the inline preview.
-   • Add as many lines as you like, using the same pattern.
-   ===================================================================== */
-const PDF_LINKS = {
- "Arrays":              "", // 👉 e.g. "pdfs/dsa/arrays.pdf"
- "Linked List":         "", // 👉 e.g. "pdfs/dsa/linked-list.pdf"
- "Trees":               "", // 👉 e.g. "pdfs/dsa/trees.pdf"
- "Dynamic Programming": "", // 👉 e.g. "pdfs/dsa/dp.pdf"
- "DSA Notes":           "", // 👉 e.g. "pdfs/dsa/dsa-notes.pdf"
- "C":                   "", // 👉 e.g. "pdfs/c-programming.pdf"
- "Java":                "", // 👉 e.g. "pdfs/java.pdf"
- "Python":              "", // 👉 e.g. "pdfs/python.pdf"
- "DBMS":                "", // 👉 e.g. "pdfs/dbms.pdf"
- "Operating System":    "", // 👉 e.g. "pdfs/os.pdf"
- "Computer Networks":   "", // 👉 e.g. "pdfs/cn.pdf"
- "Expert Resume Tips":  "", // 👉 e.g. "pdfs/resume-tips.pdf"
- // "Your Lesson Title": "pdfs/your-file.pdf",
+/* Google Drive file IDs for lesson PDFs, keyed by lesson title. */
+const DRIVE_PDF_IDS = {
+ "Arrays":              "1Li-vOznuJhBDDqy0ORJfNigaxtxDjuMo",
+ "Strings":             "1azA-ryNPVPC82c5Sut0D0XDNcHDRHm61",
+ "Linked List":         "1V6UskTjz2ckQTzxmmHHNXoRo8oRYsvrG",
+ "Stack":               "15hOxqSuyC3oA8uPhxiCG5ezqaF2W13gD",
+ "Queue":               "1JafQ7f4v3RcJoewDD_GP7rlUkUYZhbhI",
+ "Trees":               "13WENj2DtmljV0xJRxXM1FANY89aoRO3M",
+ "Graphs":              "1HmffSupiMJr0fTiepifwxZ1-CgU9ekcz",
+ "Dynamic Programming": "1dMcczbsNBB4FMmMyrJ3gZg1wi6nF1h0s",
+ "Quantitative Aptitude":"1tZ84svLV2aT_ceC2t_jWxzrKbE076eGt",
+ "Logical Reasoning":   "1owWVxfb0tcprkdjbCRCdeiML_JGLa1WP",
+ "Verbal Ability":      "1dYWXGjRleS0_en-_ml2fz8wOqAn9cS4a",
+ "Data Interpretation": "1siibedPSEXxC1Hp5L5px6bICOfjHjP9H",
+ "Expert Resume Tips":  "",
+ "ATS Friendly Templates":"",
+ "Professional Layouts": "",
+ "HR Questions":        "",
+ "Technical Questions": "",
+ "Google":              "",
+ "Microsoft":           "",
+ "Amazon":              "",
+ "TCS":                 "",
+ "Infosys":             "",
+ "Accenture":           "",
+ "Capgemini":           "",
+ "Wipro":               "",
+ "HTML":                "1P5B_WF5Zt91rQqjyQRg3SklqipKrJ3rT",
+ "CSS":                 "1zo2a0yMLYF99iaCSjPN-9mS_v-rGfYPO",
+ "C":                   "1EPUBCBm61zyKSFrafNBni5LIWt5-kHBx",
+ "JavaScript":          "12ao7kw4jBadcbajwEPu5gVR5TEjJEYPQ",
+ "Python":              "1hraQd26Q-DR9d7LAgRX3uOUDx5nZXO9J",
+ "C++":                 "14bSD25nx2-RixGX_i0KPhU9aLFVni1Az",
+ "Operating System":    "1XrDC7vo2WCa6VI5scP72qrCol28YeGmg",
+ "DBMS":                "1eVkISGgBhmvQnCXv-uJu3D8zQnzjj7lb",
+ "Computer Networks":   "1O0idLnb9CuL0pXVjAWWm6Wq_e9uwqzKJ",
+ "OOPs":                "1i8hc_GFXxrTu_ZWe_74DqLVXzyoumBU3",
+ "Java":                "11ldI7m3Jkf55o0RTqpUX-B1HWQc21DXI",
+ "DSA Notes":           "1M2llFTrUR3hPvhx_WbisI7X4XWUCJKUn",
 };
 
 function renderPdf(item){
- const box=$("lessonPdf"), frame=$("pdfFrame"), path=(PDF_LINKS[item.title]||"").trim();
+ const box=$("lessonPdf"), frame=$("pdfFrame"), fileId=DRIVE_PDF_IDS[item.title]||"";
  frame.classList.add("hidden"); frame.removeAttribute("src"); $("pdfPreviewBtn").textContent="Preview here";
- if(!path){box.classList.add("hidden");return;}
- box.classList.remove("hidden"); $("pdfOpen").href=path; $("pdfDownload").href=path;
+ if(!fileId){box.classList.add("hidden");frame.removeAttribute("data-preview-url");return;}
+ const driveFileUrl=`https://drive.google.com/file/d/${fileId}`;
+ box.classList.remove("hidden");
+ $("pdfOpen").href=`${driveFileUrl}/view?usp=sharing`;
+ $("pdfDownload").href=`https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+ frame.dataset.previewUrl=`${driveFileUrl}/preview`;
 }
 $("pdfPreviewBtn").addEventListener("click",()=>{
  const f=$("pdfFrame"), show=f.classList.contains("hidden");
- if(show)f.src=$("pdfOpen").getAttribute("href");
+ if(show)f.src=f.dataset.previewUrl;
  f.classList.toggle("hidden",!show); $("pdfPreviewBtn").textContent=show?"Hide preview":"Preview here";
 });
 
@@ -198,7 +332,7 @@ function openResource(title){
  homeView.classList.add("hidden"); authScreen.classList.add("hidden"); readerScreen.classList.remove("hidden");
  $("readerCategory").textContent=item.cat.toUpperCase(); $("readerMeta").textContent=`${item.tag} · Beginner friendly`; $("readerKicker").textContent=`${item.tag} / LEARNING NOTE`;
  $("readerTitle").textContent=item.title; $("readerLead").textContent=item.lead; $("readerBody").innerHTML=renderLesson(item);
- renderPdf(item); // show PDF box only if a path is set in PDF_LINKS
+ renderPdf(item);
  updateReaderSave();
  const index=resources.indexOf(item); $("readerPrev").disabled=index===0; $("readerNext").disabled=index===resources.length-1;
  window.scrollTo(0,0);
